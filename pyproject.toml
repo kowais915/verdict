@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sift-mcp"
+version = "0.1.0"
+description = "Verdict: a read-only MCP server exposing SIFT forensic tools to Claude Code, with a cross-artifact falsification engine and cryptographic provenance."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+authors = [{ name = "Verdict Team" }]
+keywords = ["forensics", "DFIR", "MCP", "SIFT", "Claude Code", "provenance"]
+
+dependencies = [
+    "mcp>=1.2.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.5",
+]
+
+[project.scripts]
+sift-mcp = "sift_mcp.server:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"

@@ -1,0 +1,39 @@
+# Environment — never commit the populated local config
+.env.local
+.env
+
+# Runtime logs (sample logs are committed under /samples/logs instead)
+/logs/
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# Generated accuracy report is committed (docs/accuracy_report.md) — do NOT ignore it.
+# Evidence images are large and should never be committed.
+/evidence/
+*.E01
+*.raw
+*.dd
+*.vmdk

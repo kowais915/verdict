@@ -1,0 +1,14 @@
+{
+  "_comment": "Register Verdict's read-only forensic MCP server with Claude Code. Copy the 'sift-mcp' block into your Claude Code MCP settings (e.g. ~/.claude/mcp.json or project .mcp.json). Finalized in PHASE 5.",
+  "mcpServers": {
+    "sift-mcp": {
+      "command": "python",
+      "args": ["-m", "sift_mcp.server"],
+      "env": {
+        "EVIDENCE_DIR": "/cases/evidence",
+        "LOG_DIR": "/cases/verdict-logs",
+        "MAX_ITERATIONS": "25"
+      }
+    }
+  }
+}
