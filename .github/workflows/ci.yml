@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install package + dev deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Lint (ruff)
+        run: ruff check src benchmark tests
+
+      - name: Test (pytest)
+        run: pytest -q
+
+      - name: Verify accuracy report is reproducible (numbers must not drift)
+        run: |
+          # Snapshot the committed report minus its volatile "Generated:" line,
+          # regenerate, and compare. Only a change in the actual metrics fails CI.
+          grep -v '^> Generated:' docs/accuracy_report.md > /tmp/acc_before.txt
+          python benchmark/harness.py
+          grep -v '^> Generated:' docs/accuracy_report.md > /tmp/acc_after.txt
+          diff /tmp/acc_before.txt /tmp/acc_after.txt \
+            || ( echo "::error::accuracy_report.md numbers drifted; regenerate and commit." && exit 1 )

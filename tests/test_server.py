@@ -51,6 +51,18 @@ def test_readonly_surface_guard_passes():
     _assert_readonly_surface()  # must not raise
 
 
+def test_startup_guard_refuses_to_boot_on_forbidden_tool(monkeypatch):
+    # BYPASS ATTEMPT: smuggle a destructive tool name into the exposed surface.
+    # The startup guard must refuse to boot rather than expose it.
+    import sift_mcp.server as server
+
+    monkeypatch.setattr(
+        server, "READONLY_TOOLS", server.READONLY_TOOLS + ("execute_shell",)
+    )
+    with pytest.raises(RuntimeError, match="read-only by construction"):
+        server._assert_readonly_surface()
+
+
 def test_server_methods_match_declared_tools(tmp_path):
     srv = _server(tmp_path)
     for name in READONLY_TOOLS:

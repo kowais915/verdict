@@ -31,7 +31,7 @@ def _run(tmp_path):
 
 
 def test_report_and_samples_are_generated(tmp_path):
-    res = _run(tmp_path)
+    _run(tmp_path)
     assert (tmp_path / "accuracy_report.md").exists()
     assert (tmp_path / "run.jsonl").exists()
     assert (tmp_path / "triage.md").exists()
@@ -62,8 +62,8 @@ def test_detection_recall_at_least_confirmed_recall(tmp_path):
 
 def test_sample_log_contains_execution_and_verdict_events(tmp_path):
     _run(tmp_path)
-    lines = [l for l in (tmp_path / "run.jsonl").read_text().splitlines() if l.strip()]
-    events = {__import__("json").loads(l)["event"] for l in lines}
+    lines = [ln for ln in (tmp_path / "run.jsonl").read_text().splitlines() if ln.strip()]
+    events = {__import__("json").loads(ln)["event"] for ln in lines}
     assert "tool_execution" in events
     assert "finding_verdict" in events
     assert "contradiction" in events

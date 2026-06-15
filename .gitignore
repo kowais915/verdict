@@ -25,6 +25,10 @@ venv/
 .venv/
 env/
 
+GUIDE.md
+HANDOFF.md
+docs/demo_script.md
+
 # OS / editor
 .DS_Store
 .idea/

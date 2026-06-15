@@ -128,6 +128,31 @@ DEFAULT_MATRIX: dict[str, CorroborationRule] = {
 }
 
 
+# --- DFIR reporting vocabulary (light, indicative — not a full ATT&CK mapping) #
+# Each finding is annotated so the output reads as professional DFIR: a
+# confidence band, an observation (what was seen) separated from the
+# interpretation (what it means), candidate MITRE ATT&CK technique IDs, and IOCs.
+_CONFIDENCE_BY_VERDICT: dict[str, str] = {
+    "CONFIRMED": "high",
+    "INFERRED": "low",
+    "CONTRADICTED": "disputed",
+    "RETRACTED": "rejected",
+    "UNSUPPORTED": "none",
+}
+
+_MITRE_BY_CLAIM_TYPE: dict[str, list[str]] = {
+    "program_execution": ["T1204"],  # User Execution
+    "persistence": ["T1547.001"],  # Boot/Logon Autostart Execution: Registry Run Keys
+    "account_logon": ["T1078"],  # Valid Accounts
+    "file_existence": [],
+}
+
+
+def _iocs_for(subject: str) -> list[str]:
+    """Derive simple file-name IOCs from a claim subject (best-effort, light)."""
+    return [subject] if subject and "." in subject else []
+
+
 def _rule_for(claim_type: str, matrix: dict[str, CorroborationRule]) -> CorroborationRule:
     """Return the rule for a claim type, or a permissive default if unknown."""
     if claim_type in matrix:
@@ -158,6 +183,12 @@ class Finding:
     rationale: str
     contradictions: list[str]
     evidence: list[Evidence]
+    # DFIR reporting vocabulary (computed; see _CONFIDENCE_BY_VERDICT / _MITRE_*).
+    confidence: str = "none"
+    observation: str = ""
+    interpretation: str = ""
+    mitre_attack: list[str] = field(default_factory=list)
+    iocs: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -166,6 +197,11 @@ class Finding:
             "subject": self.subject,
             "statement": self.statement,
             "verdict": self.verdict.value,
+            "confidence": self.confidence,
+            "observation": self.observation,
+            "interpretation": self.interpretation,
+            "mitre_attack": self.mitre_attack,
+            "iocs": self.iocs,
             "supporting_sources": self.supporting_sources,
             "contradicting_sources": self.contradicting_sources,
             "independent_support_count": self.independent_support_count,
@@ -249,6 +285,16 @@ def evaluate_claim(
         verdict = Verdict.UNSUPPORTED
         rationale = "No permitted corroborating evidence found."
 
+    # DFIR reporting vocabulary: separate the raw observation (what artifacts
+    # show) from the interpretation (what the verdict means), and attach a
+    # confidence band plus indicative ATT&CK techniques and IOCs.
+    observation = (
+        f"'{claim.subject}' appears in {sorted(support)} "
+        f"({s} independent source(s))"
+        + (f"; contradicted by {sorted(contradict)}" if c else "")
+    )
+    interpretation = f"{claim.statement} [{verdict.value}] {rationale}"
+
     return Finding(
         claim_id=claim.claim_id,
         claim_type=claim.claim_type,
@@ -262,6 +308,11 @@ def evaluate_claim(
         rationale=rationale,
         contradictions=contradiction_notes,
         evidence=list(claim.evidence),
+        confidence=_CONFIDENCE_BY_VERDICT.get(verdict.value, "none"),
+        observation=observation,
+        interpretation=interpretation,
+        mitre_attack=list(_MITRE_BY_CLAIM_TYPE.get(claim.claim_type, [])),
+        iocs=_iocs_for(claim.subject),
     )
 
 

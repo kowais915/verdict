@@ -316,6 +316,13 @@ def render_triage(per_scenario: list[dict]) -> str:
         for f in findings:
             L.append(f"### [{f['verdict']}] {f['statement']}")
             L.append(f"- **Claim**: `{f['claim_id']}`")
+            L.append(f"- **Confidence**: {f.get('confidence', 'n/a')}")
+            L.append(f"- **Observation**: {f.get('observation', '')}")
+            L.append(f"- **Interpretation**: {f.get('interpretation', '')}")
+            if f.get("mitre_attack"):
+                L.append(f"- **MITRE ATT&CK**: {', '.join(f['mitre_attack'])}")
+            if f.get("iocs"):
+                L.append(f"- **IOCs**: {', '.join(f['iocs'])}")
             L.append(f"- **Supporting sources** ({f['independent_support_count']}/"
                      f"{f['required_for_confirmation']} required): "
                      f"{', '.join(f['supporting_sources']) or 'none'}")

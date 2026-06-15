@@ -1,7 +1,7 @@
 # Accuracy Report
 
 > **Auto-generated** by `python benchmark/harness.py`. Do not edit by hand.
-> Generated: 2026-06-15T17:39:16Z | Mode: deterministic replay | max_iterations cap: 25
+> Generated: 2026-06-15T22:25:56Z | Mode: deterministic replay | max_iterations cap: 25
 
 This report compares **Verdict** (cross-artifact falsification engine) against a **naive single-source baseline** that confirms any finding mentioned by at least one artifact. Both use the *same* candidate claims, so the only variable is the decision rule. Honesty over perfection: Verdict deliberately downgrades single-source and contradicted findings rather than over-confirming them.
 

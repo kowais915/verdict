@@ -115,6 +115,18 @@ def test_finding_to_dict_has_rationale_and_verdict():
     assert len(d["evidence"]) == 2
 
 
+def test_finding_carries_dfir_vocabulary():
+    # DFIR reporting fields: confidence, observation vs interpretation, ATT&CK, IOCs.
+    d = evaluate_claim(_claim([_ev("prefetch"), _ev("amcache")])).to_dict()
+    assert d["confidence"] == "high"  # CONFIRMED -> high confidence
+    assert "beacon.exe" in d["observation"]  # raw "what was seen"
+    assert "CONFIRMED" in d["interpretation"]  # analytic "what it means"
+    assert d["mitre_attack"] == ["T1204"]  # program_execution -> User Execution
+    assert d["iocs"] == ["beacon.exe"]
+    # Confidence tracks the verdict: a single source is low confidence.
+    assert evaluate_claim(_claim([_ev("prefetch")])).to_dict()["confidence"] == "low"
+
+
 # --------------------------------------------------------------------------- #
 # Engine: logging of verdicts and contradictions
 # --------------------------------------------------------------------------- #
