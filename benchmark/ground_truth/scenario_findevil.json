@@ -1,0 +1,58 @@
+{
+  "name": "find-evil-sample",
+  "description": "Synthetic 'Find Evil!' triage scenario exercising every verdict path. Records mimic the normalized output of the Phase-3 read-only wrappers (PECmd/MFTECmd/AmcacheParser/RECmd/EvtxECmd). No real disk image is required; this is the deterministic replay dataset used to generate the accuracy report.",
+  "artifacts": [
+    {
+      "artifact": "prefetch",
+      "provenance_id": "pf-0001",
+      "records": [
+        {"source_artifact": "prefetch", "executable": "BEACON.EXE", "run_count": 5, "last_run": "2026-06-01 09:15:00"},
+        {"source_artifact": "prefetch", "executable": "CHROME.EXE", "run_count": 42, "last_run": "2026-06-01 12:00:00"},
+        {"source_artifact": "prefetch", "executable": "GHOST.EXE", "run_count": 0, "last_run": ""}
+      ]
+    },
+    {
+      "artifact": "amcache",
+      "provenance_id": "am-0001",
+      "records": [
+        {"source_artifact": "amcache", "name": "beacon.exe", "full_path": "C:\\Users\\evil\\beacon.exe", "sha1": "deadbeef", "last_modified": "2026-06-01 09:10:00"},
+        {"source_artifact": "amcache", "name": "evil2.exe", "full_path": "C:\\Users\\evil\\evil2.exe", "sha1": "feedface", "last_modified": "2026-06-01 10:00:00"},
+        {"source_artifact": "amcache", "name": "ghost.exe", "full_path": "C:\\Temp\\ghost.exe", "sha1": "0badf00d", "last_modified": "2026-06-01 11:00:00"},
+        {"source_artifact": "amcache", "name": "calc.exe", "full_path": "C:\\Windows\\System32\\calc.exe", "sha1": "cccccccc", "last_modified": "2026-05-01 00:00:00"}
+      ]
+    },
+    {
+      "artifact": "mft",
+      "provenance_id": "mft-0001",
+      "records": [
+        {"source_artifact": "mft", "file_name": "beacon.exe", "path": "Users\\evil\\beacon.exe", "is_directory": false, "size": 8192, "created": "2026-06-01 09:00:00", "modified": "2026-06-01 09:05:00"}
+      ]
+    },
+    {
+      "artifact": "registry_run_keys",
+      "provenance_id": "reg-0001",
+      "records": [
+        {"source_artifact": "registry_run_keys", "hive": "SOFTWARE", "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\Run", "value_name": "Updater", "value_data": "C:\\Users\\evil\\beacon.exe", "last_write": "2026-06-01 09:12:00"},
+        {"source_artifact": "registry_run_keys", "hive": "SOFTWARE", "key_path": "Software\\Microsoft\\Windows\\CurrentVersion\\Run", "value_name": "OneDrive", "value_data": "C:\\Program Files\\OneDrive\\onedrive.exe", "last_write": "2026-05-01 00:00:00"}
+      ]
+    },
+    {
+      "artifact": "evtx",
+      "provenance_id": "evtx-0001",
+      "records": [
+        {"source_artifact": "evtx", "event_id": 4688, "time_created": "2026-06-01 09:15:01", "provider": "Microsoft-Windows-Security-Auditing", "channel": "Security", "computer": "WORKSTATION01", "description": "A new process has been created", "payload": "{\"NewProcessName\":\"C:\\\\Users\\\\evil\\\\beacon.exe\"}"},
+        {"source_artifact": "evtx", "event_id": 4624, "time_created": "2026-06-01 08:00:00", "provider": "Microsoft-Windows-Security-Auditing", "channel": "Security", "computer": "WORKSTATION01", "description": "An account was successfully logged on", "payload": "{\"TargetUserName\":\"administrator\"}"}
+      ]
+    }
+  ],
+  "ground_truth": [
+    {"claim_id": "program_execution:beacon.exe", "malicious": true, "note": "C2 beacon; corroborated by prefetch + amcache + 4688"},
+    {"claim_id": "persistence:beacon.exe", "malicious": true, "note": "Run key autostart of the beacon; corroborated by registry + execution"},
+    {"claim_id": "program_execution:evil2.exe", "malicious": true, "note": "Malicious but only a single source (amcache) -> honestly INFERRED, not CONFIRMED"},
+    {"claim_id": "file_existence:beacon.exe", "malicious": true, "note": "Beacon binary on disk"},
+    {"claim_id": "program_execution:ghost.exe", "malicious": false, "note": "Present in amcache but prefetch run_count=0 -> did NOT execute; a single-source tool would wrongly confirm"},
+    {"claim_id": "program_execution:chrome.exe", "malicious": false, "note": "Benign browser, single source"},
+    {"claim_id": "program_execution:calc.exe", "malicious": false, "note": "Benign, single source"},
+    {"claim_id": "persistence:onedrive.exe", "malicious": false, "note": "Legitimate autostart, no malicious execution corroboration"}
+  ]
+}

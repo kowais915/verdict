@@ -422,10 +422,14 @@ def build_claims_from_results(
             if claim_type == "program_execution":
                 exec_by_subject.setdefault(subject, []).append(ev)
 
-    # Cross-link: persistence claims are corroborated if the target binary also
-    # has execution evidence for the same subject.
+    # Cross-link: persistence and file-existence claims are corroborated if the
+    # same binary also has execution evidence (a program that ran necessarily
+    # existed; an autostart entry whose target ran is corroborated persistence).
+    # NOTE: we only augment claims that already exist (from a registry/MFT
+    # record); we never fabricate new claims from execution alone, so the
+    # candidate set stays evidence-grounded.
     for (subject, claim_type), evlist in grouped.items():
-        if claim_type == "persistence":
+        if claim_type in ("persistence", "file_existence"):
             for ev in exec_by_subject.get(subject, []):
                 if ev not in evlist:
                     evlist.append(ev)
