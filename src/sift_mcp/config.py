@@ -166,18 +166,58 @@ def load_config(
 # --------------------------------------------------------------------------- #
 # Tool-availability detection
 # --------------------------------------------------------------------------- #
-def resolve_binary(binary: str | None) -> str | None:
-    """Resolve a configured binary to an absolute path, or None if not found.
+def _resolve_single(token: str) -> str | None:
+    """Resolve one token: an explicit existing file path -> its absolute path,
+    otherwise a bare name looked up on PATH. Returns None if unresolved."""
+    if not token:
+        return None
+    p = Path(token).expanduser()
+    if p.exists() and p.is_file():
+        return str(p.resolve())
+    return shutil.which(token)
 
-    Accepts an explicit path (file must exist) or a bare name resolved on PATH.
+
+def resolve_binary(binary: str | None) -> str | None:
+    """Resolve a configured tool path to an absolute invocation string, or None.
+
+    Two forms are accepted (this is the config-side mirror of the adapter's
+    whitespace split):
+
+    * **single binary** — an explicit path (file must exist) or a bare name on
+      PATH, e.g. ``/usr/bin/fls`` or ``MFTECmd``. Behavior is unchanged.
+    * **runtime + script** — e.g. ``dotnet /opt/PECmd/PECmd.dll``: the first
+      token is the runtime resolved on PATH, and every remaining token must be
+      an existing file on disk. The returned value is the same form with the
+      runtime PATH-resolved and the script paths expanded to absolute, so the
+      downstream contract (a single string or ``None``) is unchanged.
+
+    SECURITY: this is a config-TIME parse, NOT a shell. ``str.split()`` only
+    produces argv tokens — no globbing, quoting, variable, or operator
+    expansion — and the adapter still runs the tool with ``shell=False`` against
+    an argv list, so shell metacharacters in a configured value remain inert
+    literal data and are never executed. (A token like ``"x;"`` is simply not a
+    real file, so the tool is reported unavailable.)
     """
     if not binary:
         return None
-    p = Path(binary).expanduser()
-    if p.exists() and p.is_file():
-        return str(p.resolve())
-    found = shutil.which(binary)
-    return found
+    tokens = binary.split()
+    if not tokens:
+        return None
+    if len(tokens) == 1:
+        # Single-token form — unchanged behavior.
+        return _resolve_single(tokens[0])
+    # "runtime + script" form: the runtime must resolve on PATH, and every
+    # subsequent token must be an existing file. Any failure -> unavailable.
+    runtime = _resolve_single(tokens[0])
+    if runtime is None:
+        return None
+    resolved_scripts: list[str] = []
+    for tok in tokens[1:]:
+        p = Path(tok).expanduser()
+        if not p.is_file():
+            return None
+        resolved_scripts.append(str(p.resolve()))
+    return " ".join([runtime, *resolved_scripts])
 
 
 def check_tools(config: Config) -> dict[str, ToolStatus]:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import shutil
 import sys
 
 from sift_mcp.config import (
@@ -90,3 +91,44 @@ def test_startup_check_returns_statuses_and_writes_banner(capsys):
     assert "startup capability check" in out
     assert "WARNING" in out  # most tools missing locally
     assert set(statuses) == set(TOOL_ENV_MAP)
+
+
+# --------------------------------------------------------------------------- #
+# "runtime + script" availability (config-side mirror of the adapter's split)
+# --------------------------------------------------------------------------- #
+def test_resolve_binary_runtime_plus_script_available(tmp_path):
+    # "echo <existing-file>" resolves: echo is on PATH and the script exists.
+    script = tmp_path / "tool.dll"
+    script.write_text("x")
+    out = resolve_binary(f"echo {script}")
+    assert out is not None
+    runtime, resolved_script = out.split(" ", 1)
+    assert runtime == shutil.which("echo")  # runtime PATH-resolved
+    assert resolved_script == str(script.resolve())  # script expanded to absolute
+
+
+def test_resolve_binary_none_when_script_missing(tmp_path):
+    # Runtime ("echo") exists but the script token does not -> unavailable.
+    missing = tmp_path / "nope.dll"
+    assert resolve_binary(f"echo {missing}") is None
+
+
+def test_resolve_binary_none_when_runtime_not_on_path(tmp_path):
+    # Every script token exists, but the runtime is not on PATH -> unavailable.
+    script = tmp_path / "tool.dll"
+    script.write_text("x")
+    assert resolve_binary(f"definitely-not-a-real-runtime-xyz {script}") is None
+
+
+def test_resolve_binary_shell_metacharacters_are_inert(tmp_path):
+    # BYPASS ATTEMPT in a configured path: shell metacharacters must stay inert.
+    # split() yields tokens like "<path>;" which is not a real file, so the tool
+    # is reported unavailable. resolve_binary only inspects PATH + the
+    # filesystem; it never runs a shell, so the "rm -rf" can do nothing.
+    sentinel = tmp_path / "should_not_exist"
+    sentinel.write_text("alive")  # create it so we can prove it survives
+    malicious = f"echo {tmp_path / 'x'}; rm -rf {sentinel}"
+    assert resolve_binary(malicious) is None
+    # Defensive: the destructive tail never executed.
+    assert sentinel.exists()
+    assert sentinel.read_text() == "alive"
