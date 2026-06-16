@@ -115,11 +115,35 @@ def run_readonly_tool(
         raise AdapterError("All tool arguments must be strings (argv list, never a shell string).")
 
     configured = config.tool_paths.get(logical_name)
-    binary = resolve_binary(configured)
+
+    # Support the "runtime + script" invocation form (e.g. the Eric Zimmerman
+    # tools shipped as .NET DLLs: ``dotnet /opt/PECmd/PECmd.dll``). A configured
+    # value containing whitespace is parsed into the binary to resolve (the
+    # first token) plus fixed *prefix arguments* (the remaining tokens) that
+    # precede the caller's args. A single-token value behaves exactly as before
+    # (backward compatible).
+    #
+    # SECURITY: this is a CONFIG-TIME parse of a trusted, operator-supplied
+    # string into argv tokens — it is NOT a shell. ``str.split()`` only
+    # tokenizes on whitespace; it performs no globbing, quoting, variable, or
+    # operator expansion. The subprocess call below still runs with
+    # ``shell=False`` against an argv list, so shell metacharacters anywhere in
+    # the configured string (e.g. ``; rm -rf /``) remain inert literal
+    # arguments and are never interpreted or executed.
+    prefix_args: list[str] = []
+    tokens = configured.split() if configured else []
+    if tokens:
+        configured_binary: str | None = tokens[0]
+        prefix_args = tokens[1:]
+    else:
+        configured_binary = configured  # None / empty -> resolves to unavailable
+    binary = resolve_binary(configured_binary)
 
     def _result(status, returncode, stdout, stderr, error=None) -> ToolResult:
-        display = binary or configured or logical_name
-        command = _command_string(display, args)
+        display = binary or configured_binary or logical_name
+        # Provenance command string includes the resolved binary, the fixed
+        # prefix args (e.g. the .dll), and the caller's args, in argv order.
+        command = _command_string(display, [*prefix_args, *args])
         prov = make_provenance(
             tool_name=logical_name,
             command=command,
@@ -160,7 +184,7 @@ def run_readonly_tool(
 
     try:
         proc = subprocess.run(
-            [binary, *args],
+            [binary, *prefix_args, *args],
             capture_output=True,
             text=True,
             timeout=timeout,

@@ -115,6 +115,18 @@ is never expressible and the verdict is a deterministic function of the evidence
 
 ---
 
+## Architecture at a glance
+
+![Verdict system design — a Claude Code agent asks "was this machine hacked?"; the read-only MCP server exposes only typed look-don't-touch tools; the falsification engine confirms a finding only when two or more independent artifacts agree (otherwise INFERRED/RETRACTED); the provenance layer SHA-256-stamps every step into a triage report.](docs/images/system-design.png)
+
+The agent only ever reaches evidence through the read-only MCP server. Findings
+pass through the falsification engine (≥ 2 independent sources to confirm) and
+the provenance layer before reaching the triage report. Full diagram, trust
+boundaries, and the architectural-vs-prompt guardrail breakdown live in
+[`docs/architecture.md`](docs/architecture.md).
+
+---
+
 ## Quick start (SIFT Workstation, Linux)
 
 ```bash
